@@ -2,7 +2,7 @@
 <html>
 <body style="background-color:ORANGE;">
 
-<h1>MINDCIRCUIT TRAINING INSTITUTE , WE DONT JUST TRAIIN PEOPLE , WE BUILD CAREERS</h1>
+<h1>Hello World. This is Devops Project file </h1>
 
 
 </body>
