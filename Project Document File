@@ -1,0 +1,220 @@
+1.AWS INSTANCE:
+
+	Create Linux Server - t2.xlarge with 30gb Storage
+	
+2.INSTALL JENKINS:
+
+	sudo apt update -y
+	sudo apt install openjdk-21-jdk -y
+	
+	sudo wget -O /etc/apt/keyrings/jenkins-keyring.asc \
+	https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key
+	echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc]" \
+	https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+	/etc/apt/sources.list.d/jenkins.list > /dev/null
+	sudo apt update
+	sudo apt install jenkins
+	
+	sudo systemctl enable jenkins
+	sudo systemctl start jenkins
+	sudo systemctl status jenkins
+	
+3.GIT INTEGRATION:
+
+	Pre-Requisites:
+	
+		a.Github Username 
+		b.Github Token (github --> Settings --> Developer settings --> Personal access tokens --> classic --> Generate New Toaken)
+		
+	Add Git Credentials in Jenkins:
+		
+		a.Manage Jenkins --> Credentials --> add Credentials --> username with password(github token)
+		b.Generate pipeline Syntax (pipeline syntax --> sample steps --> select git --> add Git Repo Url --> 
+									--> Select Branch --> Select Git Credentials --> Generate Pipeline Syntax)
+		
+	Pipeline :
+		
+		pipeline {
+		  agent any 
+			stages {
+			  stage("Git") {
+                steps {
+                git credentialsId: 'git_cd', url: 'https://github.com/ssekhar0399/Git-maven-SonarQube-Nexus-Jenkins-Tomcat.git'
+				}
+			  }
+			}
+		}
+
+4.MAVEN INTEGRATION:
+
+	Install maven in linux sever
+	
+		sudo apt Install maven -y
+	
+	Add maven in Jenkins :
+	
+		Manage jenkins --> goto Tools --> Maven Installations --> Name (maven)
+		
+	Pipeline :
+	
+		pipeline {
+		  agent any
+		    tools {
+              maven "maven"
+            }
+            stages {
+              stage("Git") {
+                steps {
+                  git credentialsId: 'git_cd', url: 'https://github.com/ssekhar0399/Git-maven-SonarQube-Nexus-Jenkins-Tomcat.git'
+                }
+              }
+              stage("Maven") {
+                steps {
+                  sh "mvn clean package"
+                }
+              }
+            }
+        }
+		
+5.SONARQUBE INTEGRATION:
+
+	Install SonarQube as Docker Container:
+		
+		sudo apt install docker.io -y
+		
+		docker run -itd --name sonar -p 9000:9000 sonarqube
+		
+	Install sonarQube scanner plugin:
+	
+		manage jenkins --> plugins --> available plugins --> search sonarQube scanner plugin and install
+		
+	login to sonarQube (http://<your-server-ip>:9000)
+
+		username : admin	
+		password : admin
+			
+		change defalut password
+	
+	Generate Sonarqube Token:	
+	
+		login to sonarQube --> my account --> security --> generate token  
+			
+		squ_aa2e52ac1402c961ffd7f6d01f925ea142e45bd8
+		
+	Add sonar token in jenkins Credentials:
+	
+		Manage Jenkins --> Credentials --> add Credentials --> secret text(sonarqube token)
+		
+	Configure sonarqube in Jenkins:
+	
+		manage jenkins --> system --> sonarqube installations --> enter Name, ip adress http://<your-server-ip>:9000 and token id
+		
+	change sonarqube ip address in pom.xml
+	
+		github --> opem pom.xml --> properties --> configure sonar ip address in sonar.host.url
+		
+	Pipeline :
+		
+		pipeline {
+		  agent any
+		    tools {
+              maven "maven"
+                  }
+            stages {
+              stage("Git") {
+                steps {
+                  git credentialsId: 'git_cd', url: 'https://github.com/ssekhar0399/Git-maven-SonarQube-Nexus-Jenkins-Tomcat.git'
+                }
+              }
+              stage("Maven") {
+                steps {
+                  sh "mvn clean package"
+                }
+              }
+              stage("SonarQube") {
+                  steps {
+                    sh '''
+                           mvn org.sonarsource.scanner.maven:sonar-maven-plugin:5.8.0.7211:sonar \
+                             -Dsonar.host.url=http://13.216.237.153:9000/ \
+                             -Dsonar.login=squ_aa2e52ac1402c961ffd7f6d01f925ea142e45bd8 \
+                      '''
+                  }
+             }
+            }
+        }
+		
+6.DEPLOYMENT TOMACAT SERVER :
+
+	Install Deploy to Container plugin :
+	
+		manage jenkins --> plugins --> available plugins ..> search Deploy to container plugin and install
+	
+	
+	TOMCAT SERVER setup :
+	
+		wget https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.122/bin/apache-tomcat-9.0.122.tar.gz
+		tar -zxvf apache-tomcat-9.0.122.tar.gz 
+		
+		goto apache-tomcat-9.0.122/webapps/manager/META-INF vi context.xml (open context.xml and delete 21& 22 lines - :22 and 2dd)
+		goto apache-tomcat-9.0.122/conf vi tomcat-users.xml (open file and setup roles manager-gui,manager-script and password)
+		goto apache-tomcat-9.0.122/conf vi server.xml (open file goto 71 line and change port number 9090)
+		
+		goto apache-tomcat-9.0.122/bin perform sh shutdown.sh and sh startup.sh
+		
+	Add TOMCAT Credentials in Jenkins:
+	
+		Manage Jenkins --> Credentials --> add Credentials --> username with password
+		
+	generate pipleline syntax for Tomcat:
+	
+		goto pipeline syntax --> sample step --> select deploy: Deploy war/ear to a container
+			 WAR/EAR files		target/*.war/ear
+			 contextpath		application name
+			 add containers		select tomcat9
+			 tomcat credentials select tomcat credentials Name
+			 tomcat URl			enter tomcat ip address
+			 
+			 generate pipeline script
+			 
+	pipeline :
+	
+		pipeline {
+		  agent any
+		    tools {
+              maven "maven"
+            }
+            stages {
+              stage("Git") {
+                steps {
+                  git credentialsId: 'git_cd', url: 'https://github.com/ssekhar0399/Git-maven-SonarQube-Nexus-Jenkins-Tomcat.git'
+                }
+              }
+              stage("Maven") {
+                steps {
+                  sh "mvn clean package"
+                }
+              }
+              stage("SonarQube") {
+                  steps {
+                    sh '''
+                           mvn org.sonarsource.scanner.maven:sonar-maven-plugin:5.8.0.7211:sonar \
+                             -Dsonar.host.url=http://13.216.237.153:9000/ \
+                             -Dsonar.login=squ_aa2e52ac1402c961ffd7f6d01f925ea142e45bd8 \
+                      '''
+              }
+            }
+              stage("Deploy") {
+                  steps {
+                      deploy adapters: [tomcat9(alternativeDeploymentContext: '', credentialsId: 'tomcat_cd', path: '', url: 'http://13.216.237.153:9090/')], contextPath: 'sekhar', war: 'target/*.war'
+                  }
+              }
+            }
+        }
+
+	
+		
+		
+		
+	
+		
+	
