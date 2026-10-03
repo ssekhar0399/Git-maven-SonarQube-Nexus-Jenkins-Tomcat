@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-<body style="background-color:white;">
+<body style="background-color:orange;">
 
 <h1>Hello World. this is devops sample file </h1>
 
