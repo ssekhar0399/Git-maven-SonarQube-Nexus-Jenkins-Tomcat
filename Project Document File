@@ -143,7 +143,74 @@
             }
         }
 		
-6.DEPLOYMENT TOMACAT SERVER :
+6.NEXUS INTEGRATION :
+
+	Install nexus3 :
+	
+		docker run -itd --name nexus3 -p 8081:8081 sonatype/nexus3
+		
+		http://<your-server-ip>:9000
+		
+		docker exec -it nexus /bin/sh
+		
+		cat /nexus-data/admin.password
+		
+		username : admin
+		password : 
+		
+		change default password
+		
+	Add Nexus credentials in Jenkins :
+	
+		Manage jenkins --> Credentials --> add credentials --> username with password
+		
+	pipeline :
+	
+		pipeline {
+		  agent any
+		    tools {
+              maven "maven"
+            }
+            stages {
+              stage("Git") {
+                steps {
+                  git credentialsId: 'git_cd', url: 'https://github.com/ssekhar0399/Git-maven-SonarQube-Nexus-Jenkins-Tomcat.git'
+                }
+              }
+              stage("Maven") {
+                steps {
+                  sh "mvn clean package"
+                }
+              }
+              stage("SonarQube") {
+                  steps {
+                    sh '''
+                           mvn org.sonarsource.scanner.maven:sonar-maven-plugin:5.8.0.7211:sonar \
+                             -Dsonar.host.url=http://13.216.237.153:9000/ \
+                             -Dsonar.login=squ_aa2e52ac1402c961ffd7f6d01f925ea142e45bd8 \
+                      '''
+              }
+            }
+              stage("nexus") {
+                 steps {
+                    nexusArtifactUploader credentialsId: 'nexus_cd', groupId: 'artifact', nexusUrl: '13.216.237.153:8081', nexusVersion: 'nexus3', protocol: 'http', repository: 'maven-releases', version: '2.0',
+                    artifacts: [ [ 
+                        artifactId: 'SekharApp', 
+                        classifier: '', 
+                        file: 'target/SekharApp-2.0.0.war', 
+                        type: 'war' 
+                    ] ]
+                }
+            }
+            }
+            post {
+                success {
+                    echo "my pipeline was success:"
+                }
+            }
+        }
+
+7.DEPLOYMENT TOMACAT SERVER :
 
 	Install Deploy to Container plugin :
 	
@@ -177,7 +244,7 @@
 			 generate pipeline script
 			 
 	pipeline :
-	
+
 		pipeline {
 		  agent any
 		    tools {
@@ -203,14 +270,31 @@
                       '''
               }
             }
+              stage("nexus") {
+                 steps {
+                    nexusArtifactUploader credentialsId: 'nexus_cd', groupId: 'artifact', nexusUrl: '13.216.237.153:8081', nexusVersion: 'nexus3', protocol: 'http', repository: 'maven-releases', version: '2.0',
+                    artifacts: [ [ 
+                        artifactId: 'SekharApp', 
+                        classifier: '', 
+                        file: 'target/SekharApp-2.0.0.war', 
+                        type: 'war' 
+                    ] ]
+                }
+            }
               stage("Deploy") {
                   steps {
                       deploy adapters: [tomcat9(alternativeDeploymentContext: '', credentialsId: 'tomcat_cd', path: '', url: 'http://13.216.237.153:9090/')], contextPath: 'sekhar', war: 'target/*.war'
                   }
               }
             }
+            post {
+                success {
+                    echo "my pipeline was success:"
+                }
+            }
         }
 
+		
 	
 		
 		
