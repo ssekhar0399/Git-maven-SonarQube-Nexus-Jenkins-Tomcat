@@ -23,6 +23,17 @@ pipeline {
                       '''
               }
             }
+              stage("nexus") {
+                 steps {
+                    nexusArtifactUploader credentialsId: 'nexus_cd', groupId: 'artifact', nexusUrl: '13.216.237.153:8081', nexusVersion: 'nexus3', protocol: 'http', repository: 'maven-releases', version: '2.0',
+                    artifacts: [ [ 
+                        artifactId: 'SekharApp', 
+                        classifier: '', 
+                        file: 'target/SekharApp-2.0.0.war', 
+                        type: 'war' 
+                    ] ]
+                }
+            }
               stage("Deploy") {
                   steps {
                       deploy adapters: [tomcat9(alternativeDeploymentContext: '', credentialsId: 'tomcat_cd', path: '', url: 'http://13.216.237.153:9090/')], contextPath: 'sekhar', war: 'target/*.war'
