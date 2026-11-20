@@ -2,7 +2,7 @@
 <html>
 <body style="background-color:green;">
 
-<h1>Hello World. this is aws devops sample file </h1>
+<h1>Hello World. this is AWS devops sample file </h1>
 
 
 </body>
